@@ -1,0 +1,35 @@
+[
+  {
+	"name": "Bake",
+    "inputItems": ["Wheat"],
+    "inputQuantities": [2],
+    "outputItems": ["Bread"],
+    "outputQuantities": [1],
+	"jobs": ["BAKER"]
+  },
+  {
+	"name": "Sow",
+    "inputItems": ["Wool"],
+    "inputQuantities": [2],
+    "outputItems": ["Clothes"],
+    "outputQuantities": [1],
+	"jobs": ["TAILOR"]
+  },
+  {
+	"name": "Farm",
+    "inputItems": [],
+    "inputQuantities": [],
+    "outputItems": ["Wheat"],
+    "outputQuantities": [1],
+	"jobs": ["FARMER"]
+  },
+  {
+	"name": "Herd",
+    "inputItems": [],
+    "inputQuantities": [],
+    "outputItems": ["Wool"],
+    "outputQuantities": [1],
+	"jobs": ["SHEPHERD"]
+  }
+]
+  

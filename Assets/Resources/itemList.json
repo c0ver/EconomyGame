@@ -1,0 +1,27 @@
+[
+  {
+    "name": "Bread",
+    "desc": "The basis of life.",
+    "rarity": "COMMON",
+    "type": "CONSUMABLE",
+  },
+  {
+    "name": "Wheat",
+    "desc": "The hard labor of the common man.",
+    "rarity": "COMMON",
+    "type": "MISC"
+  },
+  {
+    "name": "Wool",
+    "desc": "Fluffy goodness.",
+    "rarity": "COMMON",
+    "type": "MISC"
+  },
+  {
+    "name": "Clothes",
+    "desc": "Cover yourself or die.",
+    "rarity": "COMMON",
+    "type": "CLOTHING",
+    "decayFactor": 0.05
+  },
+]
