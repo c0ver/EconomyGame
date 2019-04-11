@@ -27,7 +27,7 @@ public class Offer
         Price = price;
         IsSellOffer = isSellOffer;
 
-        if (Game.DebugMode) Trader.entityInfo += "Created " + this;
+        if (Game.DebugMode) Trader.EntityInfo += "Created " + this;
 
         if (!isSellOffer)
         {
@@ -79,6 +79,7 @@ public class Offer
         if (TotalQuantity == 0)
         {
             Trader.City.MarketPlace.RemoveOffer(this, IsSellOffer);
+            Trader.RemoveSellOffer(this);
         }
     }
 

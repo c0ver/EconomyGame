@@ -38,8 +38,6 @@ public class City : Thing
     {
         if (Game.DebugMode) Debug.Log(string.Format("Begin Day {0} for {1}. Population: {2}\n", Game.DayCount, this, Population));
 
-        MarketPlace.Clear();
-
         foreach(Entity entity in population)
         {
             entity.BeginDay();
@@ -47,27 +45,35 @@ public class City : Thing
 
         MarketPlace.MatchMarketOffers();
 
-        Debug.Log("Finished initializing beginning of Day " + Game.DayCount);
+        if (Game.DebugMode) Debug.Log("Finished initializing beginning of Day " + Game.DayCount);
     }
 
     public void EndDay()
     {
-        Debug.Log("Reached city EndDay for Day " + Game.DayCount);
-
-        if (Game.DebugMode) endDayInfo = string.Format("End Day {0} for {1}. Population: {2}\n\n", Game.DayCount, Name, population.Count);
+        if (Game.DebugMode)
+        {
+            Debug.Log("Reached city EndDay for Day " + Game.DayCount);
+            endDayInfo = string.Format("End Day {0} for {1}. Population: {2}\n\n", Game.DayCount, Name, population.Count);
+        }
 
         // stuff that every entity needs to do before endDay stuff
         foreach(Entity entity in population)
         {
-            entity.MidDay();
+            entity.PreEndDay();
         }
-        Debug.Log("Finished MidDay for entire population");
+
+        if (Game.DebugMode)
+        {
+            Debug.Log("Finished PreEndDay for entire population");
+            endDayInfo += MarketPlace.Info();
+        }
 
         foreach(Entity entity in population)
         {
             entity.EndDay();
         }
-        Debug.Log("Finished EndDay for entire population");
+
+        MarketPlace.Clear();
 
         // dead people don't count as people
         for(int x = population.Count - 1; x >= 0; x--)
@@ -80,7 +86,6 @@ public class City : Thing
 
         if (Game.DebugMode)
         {
-            endDayInfo += MarketPlace.Info();
             Debug.Log(endDayInfo);
             Debug.Log("\n");
         }

@@ -26,6 +26,22 @@ public class MarketPlace
 
     public void Clear()
     {
+        foreach (int itemID in buyOffers.Keys)
+        {
+            while (buyOffers[itemID].Count > 0)
+            {
+                ReturnMoney(buyOffers[itemID][0]);
+            }
+        }
+
+        foreach (int itemID in sellOffers.Keys)
+        {
+            while (sellOffers[itemID].Count > 0)
+            {
+                sellOffers[itemID][0].Trader.RemoveSellOffer(sellOffers[itemID][0]);
+            }
+        }
+
         buyOffers.Clear();
         sellOffers.Clear();
         completedOffers.Clear();
@@ -37,6 +53,15 @@ public class MarketPlace
             updateAverage[itemID] = false;
             highestPriceExchanged[itemID] = -1;
         }
+    }
+    private void ReturnMoney(Offer offer)
+    {
+        if (offer.IsSellOffer == true)
+        {
+            Debug.LogErrorFormat("Tried to return money from:\n{0}", offer);
+        }
+
+        offer.Trader.ReclaimBuyOffer(offer.ItemID);
     }
 
     public float MarketPrice(int itemID)
@@ -170,15 +195,15 @@ public class MarketPlace
         if (amountExchanged == 0)
         {
             Debug.LogWarningFormat("{0} tried to buy 0 of {1} from {2}", buyer, Thing.GetTag(itemID), seller);
-            Debug.LogWarning(buyer.entityInfo);
-            Debug.LogWarning(seller.entityInfo);
+            Debug.LogWarning(buyer.EntityInfo);
+            Debug.LogWarning(seller.EntityInfo);
             return;
         }
 
         if (Game.DebugMode)
         {
-            seller.entityInfo += string.Format("Selling {0} of {1} to {2} for a total of {3}\n", amountExchanged, buyOffer.ItemTag, buyer, amountExchanged * priceExchanged);
-            buyer.entityInfo += string.Format("Buying {0} of {1} from {2} for a total of {3}\n", amountExchanged, buyOffer.ItemTag, seller, amountExchanged * priceExchanged);
+            seller.EntityInfo += string.Format("Selling {0} of {1} to {2} for a total of {3}\n", amountExchanged, buyOffer.ItemTag, buyer, amountExchanged * priceExchanged);
+            buyer.EntityInfo += string.Format("Buying {0} of {1} from {2} for a total of {3}\n", amountExchanged, buyOffer.ItemTag, seller, amountExchanged * priceExchanged);
         }
 
         // buyer already lost money when placing order
@@ -191,8 +216,8 @@ public class MarketPlace
         {
             if (Game.DebugMode)
             {
-                seller.entityInfo += "Transaction did not go through\n";
-                buyer.entityInfo += "Transaction did not go through\n";
+                seller.EntityInfo += "Transaction did not go through\n";
+                buyer.EntityInfo += "Transaction did not go through\n";
             }
             return;
         }

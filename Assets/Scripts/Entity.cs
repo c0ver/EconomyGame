@@ -65,8 +65,8 @@ public class Entity : Thing
     private Dictionary<int, float> priceBeliefs = new Dictionary<int, float>();
 
     // never remove or add to these without calling helper functions that include the MarketPlace
-    private Dictionary<int, Offer> SellOffers { get; } = new Dictionary<int, Offer>();
-    private Dictionary<int, Offer> BuyOffers { get; } = new Dictionary<int, Offer>();
+    private Dictionary<int, Offer> sellOffers { get; } = new Dictionary<int, Offer>();
+    private Dictionary<int, Offer> buyOffers { get; } = new Dictionary<int, Offer>();
     
     // key: itemID, value: list of prices exchanged
     private Dictionary<int, List<int>> marketOrders = new Dictionary<int, List<int>>();
@@ -79,10 +79,9 @@ public class Entity : Thing
     private float bonusEfficiency = 1;
     private Recipe chosenRecipe;
     private bool hasNeededItems = false;
-    private bool createdBuyOffers = false;
 
     private float timeElapsed = 0;
-    public string entityInfo;
+    public string EntityInfo;
 
     public int Money { get; private set; } = START_MONEY;
     public City City { get; private set; }
@@ -96,7 +95,7 @@ public class Entity : Thing
 
     public Entity(string name, City city) : base(name)
     {
-        if(Game.DebugMode) entityInfo = "Created " + Tag + '\n';
+        if(Game.DebugMode) EntityInfo = "Created " + Tag + '\n';
 
         City = city;
         AddItem(CLOTHES_ID);
@@ -108,7 +107,7 @@ public class Entity : Thing
         foreach(int jobID in Job.jobDict.Keys)
         {
             jobEfficiency[jobID] = UnityEngine.Random.Range(0, ADDITIONAL_EFFICIENCY) + MIN_WORK_TIME;
-            if(Game.DebugMode) entityInfo += string.Format("{0} efficiency: {1}\n", GetTag(jobID), jobEfficiency[jobID]);
+            if(Game.DebugMode) EntityInfo += string.Format("{0} efficiency: {1}\n", GetTag(jobID), jobEfficiency[jobID]);
         }
 
         // generate a random priceBelief for each item
@@ -120,7 +119,7 @@ public class Entity : Thing
                 if (item.Rarity == Rarity.COMMON)
                 {
                     priceBeliefs[item.ID] = UnityEngine.Random.Range(1f, MAX_COMMON_PRICE_BELIEF);
-                    if (Game.DebugMode) entityInfo += string.Format("priceBelief of {0}: {1}\n", item, priceBeliefs[item.ID]);
+                    if (Game.DebugMode) EntityInfo += string.Format("priceBelief of {0}: {1}\n", item, priceBeliefs[item.ID]);
 
                     foreach(Recipe recipe in item.OutRecipes)
                     {
@@ -133,18 +132,18 @@ public class Entity : Thing
                             }
 
                             priceBeliefs[input.Key] = UnityEngine.Random.Range(1f, priceBeliefs[item.ID] / input.Value);
-                            if (Game.DebugMode) entityInfo += string.Format("priceBelief of {0}: {1}\n", GetTag(input.Key), priceBeliefs[input.Key]);
+                            if (Game.DebugMode) EntityInfo += string.Format("priceBelief of {0}: {1}\n", GetTag(input.Key), priceBeliefs[input.Key]);
                         }
                     }
 
                 }
             }
         }
-        if (Game.DebugMode) entityInfo += '\n';
+        if (Game.DebugMode) EntityInfo += '\n';
 
         ChooseJob();
 
-        if (Game.DebugMode) Debug.Log(entityInfo);
+        if (Game.DebugMode) Debug.Log(EntityInfo);
     }
 
     /*
@@ -158,7 +157,7 @@ public class Entity : Thing
 
         if (timeElapsed > jobEfficiency[Job.ID] / bonusEfficiency)
         {
-            if (Game.DebugMode) entityInfo += Game.DOUBLE_BREAK_LINE + "Update:\n\n";
+            if (Game.DebugMode) EntityInfo += Game.DOUBLE_BREAK_LINE + "Update:\n\n";
 
             timeElapsed -= jobEfficiency[Job.ID];
 
@@ -169,7 +168,7 @@ public class Entity : Thing
                 if (surplus >= 0)
                 {
                     Debug.LogErrorFormat("{0} was checked to be needed.", GetTag(itemID));
-                    Debug.LogError(entityInfo);
+                    Debug.LogError(EntityInfo);
                 }
 
                 PlaceBuyOffer(itemID, surplus * -1, (int)priceBeliefs[itemID]);
@@ -180,7 +179,7 @@ public class Entity : Thing
             {            
                 BuyNeededItems();
                 hasNeededItems = CheckNeededItems();
-                if (Game.DebugMode) entityInfo += Game.BREAK_LINE;
+                if (Game.DebugMode) EntityInfo += Game.BREAK_LINE;
             }
 
             // Buy value items
@@ -191,89 +190,103 @@ public class Entity : Thing
 
             Work();
 
-            if (Game.DebugMode) entityInfo += Game.DOUBLE_BREAK_LINE;
+            if (Game.DebugMode) EntityInfo += Game.DOUBLE_BREAK_LINE;
         }
     }
 
     // item removal occurs only before sell offers are created
     public void BeginDay()
     {
-        if (Game.DebugMode) entityInfo = string.Format("{0} has worked {1} days as a {2} with {3} money\n",
+        if (Game.DebugMode) EntityInfo = string.Format("{0} has worked {1} days as a {2} with {3} money\n",
             this, daysWorked, Job, Money);
-        if (Game.DebugMode) entityInfo += Game.DOUBLE_BREAK_LINE + "Begin Day:\n\n";
+        if (Game.DebugMode) EntityInfo += Game.DOUBLE_BREAK_LINE + "Begin Day:\n\n";
+
+        if (sellOffers.Count > 0)
+        {
+            Debug.LogErrorFormat("{0} has sell offers at the beginning of the day", this);
+            foreach(Offer offer in sellOffers.Values)
+            {
+                Debug.LogError(offer);
+            }
+        }
+        if (buyOffers.Count > 0)
+        {
+            Debug.LogErrorFormat("{0} has buy offers at the beginning of the day", this);
+            foreach(Offer offer in buyOffers.Values)
+            {
+                Debug.LogError(offer);
+            }
+        }
+        if (marketOrders.Count > 0)
+        {
+            Debug.LogErrorFormat("{0} has completed orders at the beginning of the day", this);
+        }
 
         hasNeededItems = false;
-        createdBuyOffers = false;
-
         timeElapsed = 0;
-
-        BuyOffers.Clear();
-        SellOffers.Clear();
-        marketOrders.Clear();
 
         CreateSellOffers();
         CreateInputItemBuyOffers(); // before buying needed items
 
-        if (Game.DebugMode) entityInfo += Game.DOUBLE_BREAK_LINE;
+        if (Game.DebugMode) EntityInfo += Game.DOUBLE_BREAK_LINE;
     }
 
     /* stuff that needs to be done before EndDay:
      * Use needed items and take them off the market before people start
      * looking at the market to decide their next job
      */
-    public void MidDay()
+    public void PreEndDay()
     {
-        if (Game.DebugMode) entityInfo += Game.DOUBLE_BREAK_LINE + "Mid Day:\n\n";
+        if (Game.DebugMode) EntityInfo += Game.DOUBLE_BREAK_LINE + "PreEndDay:\n\n";
 
         if (!hasNeededItems)
         {
-            if (Game.DebugMode) entityInfo += "Don't have needed items\n";
+            if (Game.DebugMode) EntityInfo += "Don't have needed items\n";
             LastChanceToBuyNeededItems();
         }
 
         IsAlive = UseNeededItems();
 
-        if (Game.DebugMode) entityInfo += Game.DOUBLE_BREAK_LINE;
+        if (Game.DebugMode) EntityInfo += Game.DOUBLE_BREAK_LINE;
     }
 
-    // or item removal occurs after all selling has happened
+    // Assume all market interactions are done
+    // However, still needs market history for the day to be intact
     public void EndDay()
     {
-        if (Game.DebugMode) entityInfo += Game.DOUBLE_BREAK_LINE + "End Day:\n\n";
+        if (Game.DebugMode) EntityInfo += Game.DOUBLE_BREAK_LINE + "End Day:\n\n";
 
+        // market buy/sell offers cannot be touched until after EndDay is completed for everybody
         UpdatePriceBeliefs();
 
         // after updating priceBeliefs
         ChooseJob();
 
-        // reclaim money from buy Offers
-        while(BuyOffers.Count > 0)
-        {
-            ReclaimBuyOffer(BuyOffers.Keys.First());
-        }
-
-        if (Game.DebugMode) entityInfo += Game.DOUBLE_BREAK_LINE;
+        // only touches personal buy/sell offers
+        // still need to clear market buy/sell offers later
+        marketOrders.Clear();
 
         if (Game.DebugMode)
         {
-            entityInfo += "Inventory:\n";
+            EntityInfo += Game.DOUBLE_BREAK_LINE;
+            EntityInfo += "Inventory:\n";
             for (int x = 0; x < inventory.Count; x++)
             {
                 Item item = inventory[x];
-                entityInfo += item.Tag + " " + item.Condition + "\n";
+                EntityInfo += item.Tag + " " + item.Condition + "\n";
             }
 
-            Debug.Log(entityInfo);
+            Debug.Log(EntityInfo);
         }
     }
 
     private void LastChanceToBuyNeededItems()
     {
         // need items to live but still has buy offers with money in them
-        while (!hasNeededItems && BuyOffers.Count > 0)
+        while (!hasNeededItems && buyOffers.Count > 0)
         {
             int itemIDToReclaim = -1;
-            foreach (int itemID in BuyOffers.Keys)
+            foreach (int itemID in buyOffers.Keys)
             {
                 if (Money > 0 || !DAILY_NEEDED_ITEMS.ContainsKey(itemID))
                 {
@@ -301,9 +314,9 @@ public class Entity : Thing
             SortedList<float, int> sellableItems = new SortedList<float, int>();
             foreach(int itemID in GetUniqueItemsInInventory())
             {
-                if (SellOffers.ContainsKey(itemID))
+                if (sellOffers.ContainsKey(itemID))
                 {
-                    RemoveSellOffer(SellOffers[itemID]);
+                    RemoveSellOffer(sellOffers[itemID]);
                 }
 
                 int surplus = (int)GetNeedSurplus(itemID);
@@ -312,7 +325,7 @@ public class Entity : Thing
                     int highestBuyPrice = City.MarketPlace.HighestAvailableBuyPrice(itemID);
                     if (highestBuyPrice == -1)
                     {
-                        if (Game.DebugMode) entityInfo += string.Format("There are no buy offers for {0} - cannot sell\n", GetTag(itemID));
+                        if (Game.DebugMode) EntityInfo += string.Format("There are no buy offers for {0} - cannot sell\n", GetTag(itemID));
                         continue;
                     }
 
@@ -330,12 +343,12 @@ public class Entity : Thing
 
             if (Game.DebugMode)
             {
-                entityInfo += "Sellable items:\n";
+                EntityInfo += "\nSellable items:\n";
                 foreach(var sellableItem in sellableItems)
                 {
-                    entityInfo += string.Format("{0} at a loss at {1}", GetTag(sellableItem.Value), sellableItem.Key);
+                    EntityInfo += string.Format("{0} at {1} of price belief\n", GetTag(sellableItem.Value), sellableItem.Key);
                 }
-                entityInfo += "\n";
+                EntityInfo += "\n";
             }
 
             // sell items with least loss
@@ -345,9 +358,9 @@ public class Entity : Thing
                 float price = sellableItems.Last().Key;
                 int itemID = sellableItems.Last().Value;
 
-                if (SellOffers.ContainsKey(itemID))
+                if (sellOffers.ContainsKey(itemID))
                 {
-                    RemoveSellOffer(SellOffers[itemID]);
+                    RemoveSellOffer(sellOffers[itemID]);
                 }
 
                 int highestBuyPrice = City.MarketPlace.HighestAvailableBuyPrice(itemID);
@@ -365,19 +378,25 @@ public class Entity : Thing
                 }
 
                 PlaceSellOffer(itemID, surplus, highestBuyPrice);
+                // want to sell immediately
+                if (sellOffers.ContainsKey(itemID))
+                {
+                    RemoveSellOffer(sellOffers[itemID]); 
+                }
+
                 BuyNeededItems();
             }
         }
     }
 
-    private void ReclaimBuyOffer(int itemID)
+    public void ReclaimBuyOffer(int itemID)
     {
-        Offer offer = BuyOffers[itemID];
+        Offer offer = buyOffers[itemID];
 
-        if (Game.DebugMode) entityInfo += offer;
+        if (Game.DebugMode) EntityInfo += offer;
 
         Money += offer.QuantityLeft * offer.Price;
-        if (Game.DebugMode) entityInfo += string.Format("Reclaimed {0} for a total of {1}\n",
+        if (Game.DebugMode) EntityInfo += string.Format("Reclaimed {0} for a total of {1}\n",
             offer.QuantityLeft * offer.Price, Money);
 
         RemoveBuyOffer(offer);
@@ -386,7 +405,7 @@ public class Entity : Thing
     // newPriceBelief = highest value item exchanged for
     private void UpdatePriceBeliefs()
     {
-        if (Game.DebugMode) entityInfo += "Updating priceBeliefs for " + this + '\n';
+        if (Game.DebugMode) EntityInfo += "Updating priceBeliefs for " + this + '\n';
         string changeFormat = "{0}: {1} -> {2}, a change of {3}%\n\n";
 
         List<int> itemIDList = new List<int>(priceBeliefs.Keys);
@@ -398,7 +417,7 @@ public class Entity : Thing
 
             if (Game.DebugMode)
             {
-                entityInfo += string.Format("{0}:\nMarket Price: {1}\nQuantity Sold: {2}\n", GetTag(itemID), marketPrice, quantityExchanged);
+                EntityInfo += string.Format("{0}:\nMarket Price: {1}\nQuantity Sold: {2}\n", GetTag(itemID), marketPrice, quantityExchanged);
             }
 
             // this item was exchanged on the market
@@ -410,7 +429,7 @@ public class Entity : Thing
                 if (lowestPrice == -1)
                 {
                     marketPrice *= (float)3 / 2;
-                    if (Game.DebugMode) entityInfo += string.Format("Sold out -> New Market Price: {0}\n", marketPrice);
+                    if (Game.DebugMode) EntityInfo += string.Format("Sold out -> New Market Price: {0}\n", marketPrice);
                 }
 
                 // trust the marketprice more if quantityExchanged is high compared with the city population
@@ -421,7 +440,7 @@ public class Entity : Thing
 
                 priceBeliefs[itemID] = prevPriceBelief * prevBeliefWeight + marketPrice * marketPriceWeight;
 
-                if (Game.DebugMode) entityInfo += string.Format("prevBeliefWeight: {0} | marketPriceWeight: {1}\n", prevBeliefWeight, marketPriceWeight);
+                if (Game.DebugMode) EntityInfo += string.Format("prevBeliefWeight: {0} | marketPriceWeight: {1}\n", prevBeliefWeight, marketPriceWeight);
             }
             else // make the new priceBelief based on buy/sell offers made if any
             {
@@ -430,8 +449,8 @@ public class Entity : Thing
 
                 if (Game.DebugMode)
                 {
-                    entityInfo += string.Format("Lowest sell Price: {0}\n", lowestSellOfferPrice);
-                    entityInfo += string.Format("Highest buy Price: {0}\n", highestBuyOfferPrice);
+                    EntityInfo += string.Format("Lowest sell Price: {0}\n", lowestSellOfferPrice);
+                    EntityInfo += string.Format("Highest buy Price: {0}\n", highestBuyOfferPrice);
                 }
 
                 // market price is probably the average of the two
@@ -449,7 +468,7 @@ public class Entity : Thing
                 {
                     marketPrice = highestBuyOfferPrice + 1;
                 }
-                if (Game.DebugMode) entityInfo += string.Format("New Market Price: {0}\n", marketPrice);
+                if (Game.DebugMode) EntityInfo += string.Format("New Market Price: {0}\n", marketPrice);
 
                 // take the simple average of the two
                 priceBeliefs[itemID] = (prevPriceBelief + marketPrice) / 2;
@@ -458,27 +477,27 @@ public class Entity : Thing
             if (Game.DebugMode)
             {
                 float percentChange = 100 * (priceBeliefs[itemID] - prevPriceBelief) / prevPriceBelief;
-                entityInfo += string.Format(changeFormat, GetTag(itemID), prevPriceBelief,
+                EntityInfo += string.Format(changeFormat, GetTag(itemID), prevPriceBelief,
                     priceBeliefs[itemID], percentChange);
             }
 
             if (float.IsNaN(priceBeliefs[itemID]))
             {
                 Debug.LogError("This belief is NaN");
-                Debug.LogError(entityInfo);
+                Debug.LogError(EntityInfo);
             }
         }
 
-        if (Game.DebugMode) entityInfo += Game.BREAK_LINE;
+        if (Game.DebugMode) EntityInfo += Game.BREAK_LINE;
     }
 
     private void Work()
     {
-        if (Game.DebugMode) entityInfo += string.Format("{0} is trying to {1}\n", this, chosenRecipe);
+        if (Game.DebugMode) EntityInfo += string.Format("{0} is trying to {1}\n", this, chosenRecipe);
 
         if (!HasInputs(chosenRecipe))
         {
-            if (Game.DebugMode) entityInfo += string.Format("{0} does not have enough inputs\n", this);
+            if (Game.DebugMode) EntityInfo += string.Format("{0} does not have enough inputs\n", this);
             UpdateChosenRecipe();
             return;
         }
@@ -490,7 +509,7 @@ public class Entity : Thing
             PlaceSellOffer(itemID);
         }
 
-        if (Game.DebugMode) entityInfo += Game.BREAK_LINE;
+        if (Game.DebugMode) EntityInfo += Game.BREAK_LINE;
     }
 
     private void MakeRecipe(Recipe recipe)
@@ -517,17 +536,17 @@ public class Entity : Thing
             {
                 if (Game.DebugMode)
                 {
-                    entityInfo += string.Format("Has only {0} of {1}; needs to consume {2}\n",
+                    EntityInfo += string.Format("Has only {0} of {1}; needs to consume {2}\n",
                         inInventory, Item.ItemList[consumable.Key], consumable.Value);
                     Debug.LogWarningFormat("{0} died due to a lack of {1}\n", this, GetTag(consumable.Key)); ;
-                    Debug.LogWarning(entityInfo);
+                    Debug.LogWarning(EntityInfo);
                 }
                 return false;
             }
 
             if (Game.DebugMode)
             {
-                entityInfo += string.Format("{0} ate {1} for today.\n", this, Item.ItemList[consumable.Key]);
+                EntityInfo += string.Format("{0} ate {1} for today.\n", this, Item.ItemList[consumable.Key]);
             }
 
             RemoveItem(consumable.Key, consumable.Value);
@@ -543,15 +562,15 @@ public class Entity : Thing
             {
                 if (Game.DebugMode)
                 {
-                    entityInfo += string.Format("Has only {0} of {1}; needs {2}\n",
+                    EntityInfo += string.Format("Has only {0} of {1}; needs {2}\n",
                         inInventory, Item.ItemList[item.Key], item.Value);
                     Debug.LogWarningFormat("{0} died due to a lack of {1}\n", this, GetTag(item.Key)); ;
-                    Debug.LogWarning(entityInfo);
+                    Debug.LogWarning(EntityInfo);
                 }
                 return false;
             }
 
-            if (Game.DebugMode) entityInfo += string.Format("{0} used {1} for today.\n", this, Item.ItemList[item.Key]);
+            if (Game.DebugMode) EntityInfo += string.Format("{0} used {1} for today.\n", this, Item.ItemList[item.Key]);
             ItemUseDecay(item.Key);
         }
 
@@ -560,7 +579,7 @@ public class Entity : Thing
 
     private bool CheckNeededItems()
     {
-        if (Game.DebugMode) entityInfo += "Checking for need:\n";
+        if (Game.DebugMode) EntityInfo += "Checking for need:\n";
 
         foreach (int itemID in DAILY_NEEDED_ITEMS.Keys)
         {
@@ -568,7 +587,7 @@ public class Entity : Thing
             {
                 return false;
             }
-            if (Game.DebugMode) entityInfo += "\n";
+            if (Game.DebugMode) EntityInfo += "\n";
         }
         return true;
     }
@@ -581,7 +600,7 @@ public class Entity : Thing
     private float GetNeedSurplus(int itemID)
     {
         float surplus = GetTotalInInventory(itemID);
-        if (Game.DebugMode) entityInfo += string.Format("Has {0} of {1} in inventory\n", surplus, GetTag(itemID));
+        if (Game.DebugMode) EntityInfo += string.Format("Has {0} of {1} in inventory\n", surplus, GetTag(itemID));
 
         // subtract needed items
         if (DAILY_NEEDED_ITEMS.ContainsKey(itemID))
@@ -594,7 +613,7 @@ public class Entity : Thing
             }
             surplus -= usePerDay * NEED_PLAN_AHEAD;
 
-            if (Game.DebugMode) entityInfo += string.Format("UsePerDay: {0} -> Surplus of {1}\n", usePerDay, surplus);
+            if (Game.DebugMode) EntityInfo += string.Format("UsePerDay: {0} -> Surplus of {1}\n", usePerDay, surplus);
         }
 
         // itemID is being used in a recipe to make the needed item
@@ -607,9 +626,9 @@ public class Entity : Thing
             if (Game.DebugMode) entityInfo += string.Format("UsePerCycle: {0} -> Surplus of {1}\n", usePerCycle, surplus);
         }*/
 
-        surplus = RemoveFromSellOffer(itemID, surplus);
+        surplus = CheckIfSelling(itemID, surplus);
 
-        if (Game.DebugMode) entityInfo += string.Format("Need Surplus of {0}\n", surplus);
+        if (Game.DebugMode) EntityInfo += string.Format("Need Surplus of {0}\n", surplus);
 
         return surplus;
     }
@@ -625,44 +644,45 @@ public class Entity : Thing
             int numbCyclesPerDay = (int) (Game.DAY_LENGTH / (jobEfficiency[Job.ID] / bonusEfficiency));
             surplus -= usePerCycle * numbCyclesPerDay* JOB_PLAN_AHEAD;
 
-            if (Game.DebugMode) entityInfo += string.Format("UsePerCycle: {0}, numbCycles: {1} -> Surplus of {2}\n", usePerCycle, numbCyclesPerDay, surplus);
+            if (Game.DebugMode) EntityInfo += string.Format("UsePerCycle: {0}, numbCycles: {1} -> Surplus of {2}\n", usePerCycle, numbCyclesPerDay, surplus);
         }
         else
         {
             Debug.LogErrorFormat("{0} is not an input", GetTag(itemID));
-            Debug.LogError(entityInfo);
+            Debug.LogError(EntityInfo);
         }
 
-        surplus = RemoveFromSellOffer(itemID, surplus);
+        surplus = CheckIfSelling(itemID, surplus);
 
-        if (Game.DebugMode) entityInfo += string.Format("Input Surplus of {0}\n", surplus);
+        if (Game.DebugMode) EntityInfo += string.Format("Input Surplus of {0}\n", surplus);
 
         return surplus;
     }
 
-    private float RemoveFromSellOffer(int itemID, float surplus)
+    private float CheckIfSelling(int itemID, float surplus)
     {
-        if (!SellOffers.ContainsKey(itemID))
+        if (!sellOffers.ContainsKey(itemID))
         {
             return surplus;
         }
 
-        int currentlySelling = SellOffers[itemID].QuantityLeft;
+        int currentlySelling = sellOffers[itemID].QuantityLeft;
         surplus -= currentlySelling;
 
-        if (Game.DebugMode) entityInfo += string.Format("Selling {0} -> Surplus of {1}\n", currentlySelling, surplus);
+        if (Game.DebugMode) EntityInfo += string.Format("Selling {0} -> Surplus of {1}\n", currentlySelling, surplus);
 
         // if we need it and we're selling it...
         if (surplus < 0)
         {
             // assuming negative numbers round down, ex: -1.67 -> -2
             int amount = ((int)surplus) * -1;
-            SellOffers[itemID].ReduceQuantity(amount);
-            if (Game.DebugMode) entityInfo += string.Format("{0} is decreasing sell amount by {1}\n", this, amount);
+            if (currentlySelling < amount) amount = currentlySelling;
 
-            currentlySelling = SellOffers[itemID].QuantityLeft;
-            surplus += currentlySelling;
-            if (Game.DebugMode) entityInfo += string.Format("Selling {0} -> Surplus of {1}\n", currentlySelling, surplus);
+            sellOffers[itemID].ReduceQuantity(amount);
+            if (Game.DebugMode) EntityInfo += string.Format("{0} is decreasing sell amount by {1}\n", this, amount);
+
+            surplus += amount;
+            if (Game.DebugMode) EntityInfo += string.Format("Selling {0} -> Surplus of {1}\n", currentlySelling, surplus);
         }
 
         return surplus;
@@ -678,7 +698,7 @@ public class Entity : Thing
 
                 if(breakChance < item.DecayFactor)
                 {
-                    if (Game.DebugMode) entityInfo += string.Format("{0} lost a {1} due to decay\n", this, item);
+                    if (Game.DebugMode) EntityInfo += string.Format("{0} lost a {1} due to decay\n", this, item);
                     RemoveItem(itemID);
                 }
 
@@ -688,7 +708,7 @@ public class Entity : Thing
         }
 
         Debug.LogErrorFormat("{0} was not found in {1}'s inventory", GetTag(itemID), this);
-            Debug.LogError(entityInfo);
+            Debug.LogError(EntityInfo);
     }
 
     // has inputs available in inventory or market
@@ -703,16 +723,16 @@ public class Entity : Thing
         {
             return true;
         } 
-        if (Game.DebugMode) entityInfo += string.Format("Does not have input: {0} in inventory\n", GetTag(itemID));
+        if (Game.DebugMode) EntityInfo += string.Format("Does not have input: {0} in inventory\n", GetTag(itemID));
 
         int lowestPrice = City.MarketPlace.LowestAvailableSellPrice(itemID);
         if(lowestPrice <= Money && lowestPrice != -1)
         {
             return true;
         }
-        if (Game.DebugMode) entityInfo += string.Format("Cannot buy or find {0} on the market\n", GetTag(itemID));
+        if (Game.DebugMode) EntityInfo += string.Format("Cannot buy or find {0} on the market\n", GetTag(itemID));
 
-        if (Game.DebugMode) entityInfo += string.Format("No access to {0}\n", GetTag(itemID));
+        if (Game.DebugMode) EntityInfo += string.Format("No access to {0}\n", GetTag(itemID));
         return false;
     }
 
@@ -736,7 +756,7 @@ public class Entity : Thing
      */
     private void ChooseJob()
     {
-        if (Game.DebugMode) entityInfo += "Previous job: " + Job + "\n\n";
+        if (Game.DebugMode) EntityInfo += "Previous job: " + Job + "\n\n";
 
         daysWorked++;
         Job prevJob = Job;
@@ -744,11 +764,17 @@ public class Entity : Thing
         Job bestJob = null;
         float bestJobValue = float.MinValue;
 
+        int totalLiquidity = Money;
+        foreach (Offer buyOffer in buyOffers.Values)
+        {
+            totalLiquidity += buyOffer.Price * buyOffer.QuantityLeft;
+        }
+
         /* look through needed items
          * if needed, make sure its on yesterday's market
          * if not on yesterday's market, that is the job to do if inputs are available
          */
-        if (Game.DebugMode) entityInfo += string.Format("Looking at jobs for need:\nMoney: {0}\n", Money);
+        if (Game.DebugMode) EntityInfo += string.Format("Looking at jobs for need:\nLiquidity: {0}\n", totalLiquidity);
         foreach(int itemID in DAILY_NEEDED_ITEMS.Keys)
         {
             float surplus = GetNeedSurplus(itemID);
@@ -759,10 +785,10 @@ public class Entity : Thing
             }
 
             int lowestPrice = City.MarketPlace.LowestAvailableSellPrice(itemID);
-            if (Game.DebugMode) entityInfo += string.Format("LowestPriceAvailableToday: {0}\n", lowestPrice);
+            if (Game.DebugMode) EntityInfo += string.Format("LowestPriceAvailableToday: {0}\n", lowestPrice);
 
             // I need the item and I can't get it from the marketplace
-            if(lowestPrice == -1 || lowestPrice > Money)
+            if(lowestPrice == -1 || lowestPrice > totalLiquidity)
             {
                 List<Recipe> recipes = Item.ItemList[itemID].OutRecipes;
                 foreach (Recipe recipe in recipes)
@@ -777,22 +803,22 @@ public class Entity : Thing
                             daysWorked = 0;
                         }
 
-                        if (Game.DebugMode) entityInfo += "Job due to need: " + Job + "\n";
+                        if (Game.DebugMode) EntityInfo += "Job due to need: " + Job + "\n";
                         return;
                     }
-                    else if (Game.DebugMode) entityInfo += "No access to input items for " + GetTag(itemID) + '\n';
+                    else if (Game.DebugMode) EntityInfo += "No access to input items for " + GetTag(itemID) + '\n';
 
-                    if (Game.DebugMode) entityInfo += '\n';
+                    if (Game.DebugMode) EntityInfo += '\n';
                 }
             }
         }
 
         // look at jobs for value
-        if (Game.DebugMode) entityInfo += "\nLooking at jobs for value:\n";
+        if (Game.DebugMode) EntityInfo += "\nLooking at jobs for value:\n";
         Recipe bestRecipe = null;
         foreach(Job potentialJob in Job.jobDict.Values)
         {
-            if (Game.DebugMode) entityInfo += "Looking at " + potentialJob + "\n";
+            if (Game.DebugMode) EntityInfo += "Looking at " + potentialJob + "\n";
 
             Tuple<float, Recipe> result = GetHighestRecipeValue(potentialJob);
             float value = result.Item1;
@@ -814,7 +840,7 @@ public class Entity : Thing
             daysWorked = 0;
         }
 
-        if (Game.DebugMode) entityInfo += string.Format("Job due to value: {0}\nRecipe: {1}\n\n", Job, chosenRecipe);
+        if (Game.DebugMode) EntityInfo += string.Format("Job due to value: {0}\nRecipe: {1}\n\n", Job, chosenRecipe);
     }
 
     private Recipe UpdateChosenRecipe()
@@ -834,11 +860,11 @@ public class Entity : Thing
         float bestValue = float.MinValue;
         Recipe bestRecipe = null;
 
-        if (Game.DebugMode) entityInfo += string.Format("Finding best value for {0}\n", potentialJob);
+        if (Game.DebugMode) EntityInfo += string.Format("Finding best value for {0}\n", potentialJob);
 
         foreach (Recipe recipe in potentialJob.Recipes)
         {
-            if (Game.DebugMode) entityInfo += string.Format("Looking at recipe: {0}\n", recipe);
+            if (Game.DebugMode) EntityInfo += string.Format("Looking at recipe: {0}\n", recipe);
 
             float recipeValue = 0;
 
@@ -892,7 +918,7 @@ public class Entity : Thing
             if (Job != null && Job.Equals(potentialJob))
             {
                 bonusEfficiency = 2 / (1 + Mathf.Exp(-0.5f * daysWorked));
-                if (Game.DebugMode) entityInfo += "Bonus Efficiency: " + bonusEfficiency + '\n';
+                if (Game.DebugMode) EntityInfo += "Bonus Efficiency: " + bonusEfficiency + '\n';
             }
 
             int numbCyclesPerDay = (int) (Game.DAY_LENGTH / (jobEfficiency[potentialJob.ID] / bonusEfficiency));
@@ -901,7 +927,7 @@ public class Entity : Thing
 
             if (Game.DebugMode)
             {
-                entityInfo += string.Format("Cost: {0}, Reward: {1}, Efficiency: {2}, Value: {3}\n",
+                EntityInfo += string.Format("Cost: {0}, Reward: {1}, Efficiency: {2}, Value: {3}\n",
                     costValue, rewardValue, jobEfficiency[potentialJob.ID], recipeValue);
             }
 
@@ -914,7 +940,7 @@ public class Entity : Thing
 
         if (Game.DebugMode)
         {
-            entityInfo += string.Format("Best value: {0}\n\n", bestValue);
+            EntityInfo += string.Format("Best value: {0}\n\n", bestValue);
         }
 
         return Tuple.Create(bestValue, bestRecipe);
@@ -928,7 +954,7 @@ public class Entity : Thing
         {
             int itemID = missingInputs[x];
 
-            if (BuyOffers.ContainsKey(itemID))
+            if (buyOffers.ContainsKey(itemID))
             {
                 missingInputs.RemoveAt(x);
             }
@@ -973,7 +999,7 @@ public class Entity : Thing
     // returns true if all buyOffers were made successfully
     private bool BuyNeededItems()
     {
-        if (Game.DebugMode) entityInfo += "Buying for need:\n";
+        if (Game.DebugMode) EntityInfo += "Buying for need:\n";
 
         bool success = true;
         foreach(var need in DAILY_NEEDED_ITEMS)
@@ -989,10 +1015,10 @@ public class Entity : Thing
                 }
             }
 
-            if (Game.DebugMode) entityInfo += '\n';
+            if (Game.DebugMode) EntityInfo += '\n';
         }
 
-        if (Game.DebugMode) entityInfo += Game.BREAK_LINE;
+        if (Game.DebugMode) EntityInfo += Game.BREAK_LINE;
 
         return success;
     }
@@ -1005,15 +1031,15 @@ public class Entity : Thing
      */
     private bool CreateNeededItemBuyOffer(int itemID, int neededAmount)
     {
-        if (Game.DebugMode) entityInfo += string.Format("Need {0} of {1}\n", neededAmount, GetTag(itemID));
+        if (Game.DebugMode) EntityInfo += string.Format("Need {0} of {1}\n", neededAmount, GetTag(itemID));
 
         if (Money == 0)
         {
-            if (Game.DebugMode) entityInfo += "Have no money\n";
+            if (Game.DebugMode) EntityInfo += "Have no money\n";
             return false;
         }
 
-        if (BuyOffers.ContainsKey(itemID))
+        if (buyOffers.ContainsKey(itemID))
         {
             ReclaimBuyOffer(itemID);
         }
@@ -1069,7 +1095,7 @@ public class Entity : Thing
     // assumes we already checked for the value of doing recipe
     private void CreateInputItemBuyOffers()
     {
-        if (Game.DebugMode) entityInfo += "Buying input items for " + chosenRecipe + "\n";
+        if (Game.DebugMode) EntityInfo += "Buying input items for " + chosenRecipe + "\n";
 
         foreach(var input in chosenRecipe.InputInfo)
         {
@@ -1081,7 +1107,7 @@ public class Entity : Thing
                 PlaceBuyOffer(itemID, surplus * -1, (int)priceBeliefs[itemID]);
             }
         }
-        if (Game.DebugMode) entityInfo += Game.BREAK_LINE;
+        if (Game.DebugMode) EntityInfo += Game.BREAK_LINE;
     }
 
     // Depreceated !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1136,7 +1162,7 @@ public class Entity : Thing
     // Quantity of 1 for now, increase if filled
     private void CreateValueBuyOffers()
     {
-        if (Game.DebugMode) entityInfo += "Creating value buy offers for USED items:\n";
+        if (Game.DebugMode) EntityInfo += "Creating value buy offers for USED items:\n";
 
         // create combined list of used items and needed items
         List<int> usedItems = new List<int>(DAILY_NEEDED_ITEMS.Keys);
@@ -1147,7 +1173,7 @@ public class Entity : Thing
 
         foreach(int itemID in usedItems)
         {
-            if (!BuyOffers.ContainsKey(itemID))
+            if (!buyOffers.ContainsKey(itemID))
             {
                 int buyPrice = (int)(priceBeliefs[itemID] * UNNEEDED_USED_REDUCTION);
                 if (buyPrice > 0)
@@ -1157,12 +1183,12 @@ public class Entity : Thing
             }
         }
 
-        if (Game.DebugMode) entityInfo += "\nCreating value buy offers for UNUSED items:\n";
+        if (Game.DebugMode) EntityInfo += "\nCreating value buy offers for UNUSED items:\n";
 
         // create buy offers for unused unneeded items at 50%* of priceBelief
         foreach (int itemID in Item.ItemList.Keys)
         {
-            if (!usedItems.Contains(itemID) && !BuyOffers.ContainsKey(itemID))
+            if (!usedItems.Contains(itemID) && !buyOffers.ContainsKey(itemID))
             {
                 int buyPrice = (int)(priceBeliefs[itemID] * UNNEEDED_UNUSED_REDUCTION);
                 if (buyPrice > 0 && Money >= buyPrice * 1)
@@ -1172,7 +1198,7 @@ public class Entity : Thing
             }
         }
 
-        if (Game.DebugMode) entityInfo += Game.BREAK_LINE;
+        if (Game.DebugMode) EntityInfo += Game.BREAK_LINE;
     }
 
     private void PlaceBuyOffer(int itemID, int amount, int price)
@@ -1183,9 +1209,9 @@ public class Entity : Thing
             return;
         }
 
-        if (BuyOffers.ContainsKey(itemID))
+        if (buyOffers.ContainsKey(itemID))
         {
-            Debug.LogWarningFormat("There is already a buy offer:\n{2}", this, GetTag(itemID), BuyOffers[itemID]);
+            Debug.LogWarningFormat("There is already a buy offer:\n{2}", this, GetTag(itemID), buyOffers[itemID]);
             ReclaimBuyOffer(itemID);
         }
 
@@ -1197,13 +1223,13 @@ public class Entity : Thing
 
         if (actualAmount == 0)
         {
-            if (Game.DebugMode) entityInfo += string.Format("Tried to buy {0} of {1} for {2} but only have {3}\n",
+            if (Game.DebugMode) EntityInfo += string.Format("Tried to buy {0} of {1} for {2} but only have {3}\n",
                 amount, GetTag(itemID), amount * price, Money);
             return;
         }
 
         Offer offer = new Offer(this, itemID, actualAmount, price, false);
-        BuyOffers[itemID] = offer;
+        buyOffers[itemID] = offer;
         City.MarketPlace.AddOffer(offer);
     }
 
@@ -1211,7 +1237,7 @@ public class Entity : Thing
     // don't sell inputs for a job since working increases their value anyways
     private void CreateSellOffers()
     {
-        if (Game.DebugMode) entityInfo += "Creating sell offers:\n";
+        if (Game.DebugMode) EntityInfo += "Creating sell offers:\n";
 
         HashSet<Item> uniqueItems = new HashSet<Item>(inventory);
 
@@ -1221,7 +1247,7 @@ public class Entity : Thing
             if(!chosenRecipe.InputInfo.ContainsKey(item.ID)) PlaceSellOffer(item.ID);
         }
 
-        if (Game.DebugMode) entityInfo += Game.BREAK_LINE;
+        if (Game.DebugMode) EntityInfo += Game.BREAK_LINE;
     }
 
     private void PlaceSellOffer(int itemID, int surplus = -1, int sellPrice = -1)
@@ -1236,7 +1262,7 @@ public class Entity : Thing
         if(surplus > 0)
         {
             // sell offer already exists, just add to it
-            if(SellOffers.ContainsKey(itemID))
+            if(sellOffers.ContainsKey(itemID))
             {
                 if (customOffer)
                 {
@@ -1244,11 +1270,11 @@ public class Entity : Thing
                         GetTag(itemID), sellPrice, surplus);
                 }
 
-                if (Game.DebugMode) entityInfo += string.Format("Adding to {0} to {1}", surplus, SellOffers[itemID]);
+                if (Game.DebugMode) EntityInfo += string.Format("Adding to {0} to {1}", surplus, sellOffers[itemID]);
 
-                SellOffers[itemID].AddToQuantity(surplus);
+                sellOffers[itemID].AddToQuantity(surplus);
 
-                if (Game.DebugMode) entityInfo += SellOffers[itemID];
+                if (Game.DebugMode) EntityInfo += sellOffers[itemID];
                 return;
             }
 
@@ -1258,7 +1284,7 @@ public class Entity : Thing
                 // sell at a markup above the priceBelief to make money
                 if (!chosenRecipe.OutputInfo.ContainsKey(itemID) && IsBeingUsed(itemID))
                 {
-                    if (Game.DebugMode) entityInfo +=
+                    if (Game.DebugMode) EntityInfo +=
                             string.Format("Marking up the price from {0} since I am also using it and not making it\n", priceBeliefs[itemID]);
                     sellPrice = (int)(sellPrice * ITEM_MARKUP);
                 }
@@ -1267,7 +1293,7 @@ public class Entity : Thing
             }
 
             Offer offer = new Offer(this, itemID, surplus, sellPrice, true);
-            SellOffers[itemID] = offer;
+            sellOffers[itemID] = offer;
             City.MarketPlace.AddOffer(offer);
         }
     }
@@ -1315,20 +1341,20 @@ public class Entity : Thing
     public void RemoveBuyOffer(Offer offer)
     {
         City.MarketPlace.RemoveOffer(offer, false);
-        BuyOffers.Remove(offer.ItemID);
+        buyOffers.Remove(offer.ItemID);
     }
 
     public void RemoveSellOffer(Offer offer)
     {
         City.MarketPlace.RemoveOffer(offer, true);
-        SellOffers.Remove(offer.ItemID);
+        sellOffers.Remove(offer.ItemID);
     }
 
     private void AddItem(int itemID)
     {
         inventory.Add(Item.ItemList[itemID]);
 
-        if (Game.DebugMode) entityInfo += string.Format("{0} acquired a {1}\n", this, GetTag(itemID));
+        if (Game.DebugMode) EntityInfo += string.Format("{0} acquired a {1}\n", this, GetTag(itemID));
     }
 
     public void AddItem(int itemID, int count)
@@ -1350,15 +1376,15 @@ public class Entity : Thing
 
                 if (Game.DebugMode)
                 {
-                    entityInfo += string.Format("{0} lost a {1}\n",
+                    EntityInfo += string.Format("{0} lost a {1}\n",
                         Tag, GetTag(itemID));
                 }
                 return true;
             }
         }
 
-        Debug.LogErrorFormat("{0} could not remove {1}\n{2}", this, GetTag(itemID), entityInfo);
-        Debug.LogError(entityInfo);
+        Debug.LogErrorFormat("{0} could not remove {1}\n{2}", this, GetTag(itemID), EntityInfo);
+        Debug.LogError(EntityInfo);
         return false;
     }
 
@@ -1409,7 +1435,7 @@ public class Entity : Thing
     {
         Money += amount;
 
-        if (Game.DebugMode) entityInfo += string.Format("{0} gained {1} money and now has {2}\n", this, amount, Money);
+        if (Game.DebugMode) EntityInfo += string.Format("{0} gained {1} money and now has {2}\n", this, amount, Money);
     }
     
     public bool LoseMoney(int amount)
@@ -1421,11 +1447,11 @@ public class Entity : Thing
             Money += amount;
 
             Debug.LogError(this + " tried to spend more money then it could!");
-            Debug.LogError(entityInfo);
+            Debug.LogError(EntityInfo);
             return false;
         }
 
-        if (Game.DebugMode) entityInfo += string.Format("{0} lost {1} money and now has {2}\n", this, amount, Money);
+        if (Game.DebugMode) EntityInfo += string.Format("{0} lost {1} money and now has {2}\n", this, amount, Money);
 
         return true;
     }
