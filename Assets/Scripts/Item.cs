@@ -23,6 +23,7 @@ public class Item : Thing
 {
     private const string ITEM_FILE = "itemList";
     public static Dictionary<int, Item> ItemList = new Dictionary<int, Item>();
+    public static int FirstItemID;
 
     public string Description { get; }
     public Rarity Rarity { get; }
@@ -47,6 +48,8 @@ public class Item : Thing
         Type = type;
         DecayFactor = decayFactor;
         Condition = 1;
+
+        if (ItemList.Count == 0) FirstItemID = ID;
 
         ItemList.Add(ID, this);
     }

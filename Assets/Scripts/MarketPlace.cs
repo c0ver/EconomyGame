@@ -48,7 +48,7 @@ public class MarketPlace
         completedOrderAverages.Clear();
         completedOrders.Clear();
 
-        foreach(int itemID in Item.ItemList.Keys)
+        foreach (int itemID in Item.ItemList.Keys)
         {
             updateAverage[itemID] = false;
             highestPriceExchanged[itemID] = -1;
@@ -64,6 +64,19 @@ public class MarketPlace
         offer.Trader.ReclaimBuyOffer(offer.ItemID);
     }
 
+    public Dictionary<int, float> MarketPrices()
+    {
+        foreach (int itemID in Item.ItemList.Keys)
+        {
+            if (updateAverage[itemID] == true)
+            {
+                FindMarketAverage(itemID);
+            }
+        }
+
+        return completedOrderAverages;
+    }
+
     public float MarketPrice(int itemID)
     {
         if (updateAverage[itemID] == true)
@@ -71,7 +84,7 @@ public class MarketPlace
             FindMarketAverage(itemID);
         }
 
-        if(!completedOrderAverages.ContainsKey(itemID))
+        if (!completedOrderAverages.ContainsKey(itemID))
         {
             return -1;
         }
@@ -109,14 +122,14 @@ public class MarketPlace
 
     public List<Offer> GetSellOffers(int itemID)
     {
-        if(sellOffers.ContainsKey(itemID))
+        if (sellOffers.ContainsKey(itemID))
         {
             return sellOffers[itemID];
         }
 
         return null;
     }
-    
+
     public void MatchMarketOffers()
     {
         foreach (int itemID in sellOffers.Keys)
@@ -129,7 +142,7 @@ public class MarketPlace
             MatchItemOffers(itemID);
         }
     }
-    
+
     public void MatchItemOffers(int itemID)
     {
         if (!buyOffers.ContainsKey(itemID) || !sellOffers.ContainsKey(itemID)) return;
@@ -208,7 +221,7 @@ public class MarketPlace
 
         // buyer already lost money when placing order
         seller.GainMoney(priceExchanged * amountExchanged);
-        
+
         // since they actual buy price was less than the buy offer
         buyer.GainMoney((buyOffer.Price - priceExchanged) * amountExchanged);
 
@@ -324,7 +337,7 @@ public class MarketPlace
     {
         int totalCost = 0;
 
-        foreach(var input in recipe.InputInfo)
+        foreach (var input in recipe.InputInfo)
         {
             int itemID = input.Key;
             int amount = input.Value;
@@ -344,7 +357,7 @@ public class MarketPlace
 
     public int HighestAvailableBuyPrice(int itemID, int amountWanted = 1)
     {
-        if(buyOffers.ContainsKey(itemID))
+        if (buyOffers.ContainsKey(itemID))
         {
             int totalPrice = 0;
 
@@ -370,7 +383,7 @@ public class MarketPlace
 
     public int LowestAvailableSellPrice(int itemID, int amountWanted = 1)
     {
-        if(sellOffers.ContainsKey(itemID))
+        if (sellOffers.ContainsKey(itemID))
         {
             int totalPrice = 0;
 
@@ -474,7 +487,8 @@ public class MarketPlace
         }
 
         info += "\nMarket Prices:\n";
-        foreach(var avg in completedOrderAverages)
+        MarketPrices();
+        foreach (var avg in completedOrderAverages)
         {
             info += string.Format("{0}: {1}\n", Thing.GetTag(avg.Key), avg.Value);
         }

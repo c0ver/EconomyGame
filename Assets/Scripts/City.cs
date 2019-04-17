@@ -19,7 +19,7 @@ public class City : Thing
     public City(string name) : base(name)
     {
         Debug.Log("Making a city");
-        for(int x = 0; x < START_POPULATION; x++)
+        for (int x = 0; x < START_POPULATION; x++)
         {
             population.Add(new Entity("Person", this));
         }
@@ -27,7 +27,7 @@ public class City : Thing
 
     public void Update()
     {
-        foreach(Entity entity in population)
+        foreach (Entity entity in population)
         {
             entity.Update();
         }
@@ -38,7 +38,7 @@ public class City : Thing
     {
         if (Game.DebugMode) Debug.Log(string.Format("Begin Day {0} for {1}. Population: {2}\n", Game.DayCount, this, Population));
 
-        foreach(Entity entity in population)
+        foreach (Entity entity in population)
         {
             entity.BeginDay();
         }
@@ -57,7 +57,7 @@ public class City : Thing
         }
 
         // stuff that every entity needs to do before endDay stuff
-        foreach(Entity entity in population)
+        foreach (Entity entity in population)
         {
             entity.PreEndDay();
         }
@@ -68,19 +68,20 @@ public class City : Thing
             endDayInfo += MarketPlace.Info();
         }
 
-        foreach(Entity entity in population)
+        foreach (Entity entity in population)
         {
             entity.EndDay();
         }
 
+        Game.Graph.AddDay(MarketPlace.MarketPrices());
         MarketPlace.Clear();
 
         // dead people don't count as people
-        for(int x = population.Count - 1; x >= 0; x--)
+        for (int x = population.Count - 1; x >= 0; x--)
         {
-            if(population[x].IsDead())
+            if (population[x].IsDead())
             {
-                population.RemoveAt(x); 
+                population.RemoveAt(x);
             }
         }
 

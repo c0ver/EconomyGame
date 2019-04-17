@@ -12,15 +12,18 @@ public class Game : MonoBehaviour
     public const string DOUBLE_BREAK_LINE = "------------------------------------------------------------------\n";
 
     // public to be seen in Unity's inspector
-    public int dayCount = 1;
+    public int dayCount = 0;
     public int totalPopulation;
     public float totalTimeElapsed = 0;
     public float timeOfDay = 0;
     public bool debugMode;
+    public Graph graph;
 
+    // so we can call game properties statically
     public static Game Instance { get; private set; }
     public static bool DebugMode { get { return Instance.debugMode; } }
     public static int DayCount { get { return Instance.dayCount; } }
+    public static Graph Graph { get { return Instance.graph; } }
     public static float TimeOfDay
     {
         get
@@ -32,12 +35,18 @@ public class Game : MonoBehaviour
 
     public List<City> cityList = new List<City>();
 
-    private void Start()
+    private void Awake()
     {
         Instance = this;
+        GameObject obj = GameObject.Find("Graph");
+        graph = (Graph)obj.GetComponent(typeof(Graph));
+
         Item.Initialize();
         Entity.Initialize();
+    }
 
+    private void Start()
+    {
         for(int x = 0; x < TOTAL_CITIES; x++)
         {
             cityList.Add(new City("Default"));
@@ -78,7 +87,6 @@ public class Game : MonoBehaviour
         }
     }
 
-
     private void BeginDay()
     {
         foreach(City city in cityList)
@@ -87,5 +95,13 @@ public class Game : MonoBehaviour
         }
     }
 
+    private void CreateGraph()
+    {
 
+    }
+
+    private void UpdateGraph()
+    {
+
+    }
 }
